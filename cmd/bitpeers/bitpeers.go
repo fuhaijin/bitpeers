@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"github.com/RaghavSood/bitpeers"
 	flag "github.com/spf13/pflag"
 	"os"
@@ -52,7 +53,10 @@ func main() {
 
 		if formatOption == "text" {
 			for _, i := range addressArray {
-				fmt.Printf("%s\n", i)
+				//fmt.Printf("%s\n", i)
+				name := "IP.txt"
+				content := fmt.Sprintf("%s\n", i)
+				WriteWithFileWrite(name, content)
 			}
 			return
 		} else {
@@ -67,7 +71,9 @@ func main() {
 	}
 
 	if formatOption == "text" {
-		peersDb.dump()
+		//peersDb.dump()
+		name := "out.txt"
+		peersDb.write_to_txt(name)
 	} else {
 		encodedPeers, err := json.Marshal(peersDb)
 		if err != nil {
@@ -77,6 +83,57 @@ func main() {
 		fmt.Println(string(encodedPeers))
 	}
 
+}
+
+func (peersDB BitPeersDB) write_to_txt(name string) {
+	content := "bitpeers\n"
+	content += "--------\n"
+	content += fmt.Sprintf("Path: %s\n", peersDB.Path)
+	content += fmt.Sprintf("MessageBytes: 0x%s\n", hexstring(peersDB.MessageBytes))
+	content += fmt.Sprintf("Version: %d\n", peersDB.Version)
+	content += fmt.Sprintf("KeySize: %d\n", peersDB.KeySize)
+	content += fmt.Sprintf("NKey: %s\n", peersDB.NKey)
+	content += fmt.Sprintf("NNew: %d\n", peersDB.NNew)
+	content += fmt.Sprintf("NTried: %d\n", peersDB.NTried)
+	content += fmt.Sprintf("NewBuckets: %d\n\n", peersDB.NewBuckets)
+	WriteWithFileWrite(name, content)
+
+	var i uint32
+	for i = 0; i < peersDB.NNew; i++ {
+		content = fmt.Sprintf("%s\n", peersDB.NewAddrInfo[i])
+		WriteWithFileWrite(name, content)
+	}
+
+	fmt.Println("Tried Addresses:")
+	for i = 0; i < peersDB.NTried; i++ {
+		content = fmt.Sprintf("%s\n", peersDB.TriedAddrInfo[i])
+		WriteWithFileWrite(name, content)
+	}
+}
+
+//使用ioutil.WriteFile方式写入文件,是将[]byte内容写入文件,如果content字符串中没有换行符的话，默认就不会有换行符
+func WriteWithIoutil(name,content string) {
+    data :=  []byte(content)
+    if ioutil.WriteFile(name,data,/*0644*/os.ModeAppend) == nil {
+        fmt.Println("\n",content)
+    }
+}
+
+//使用os.OpenFile()相关函数打开文件对象，并使用文件对象的相关方法进行文件写入操作
+func WriteWithFileWrite(name,content string){
+    fileObj,err := os.OpenFile(name,os.O_RDWR|os.O_CREATE|os.O_APPEND,0644)
+    if err != nil {
+        fmt.Println("Failed to open the file",err.Error())
+        os.Exit(2)
+    }
+    defer fileObj.Close()
+    //if _,err := fileObj.WriteString(content);err == nil {
+    //    fmt.Println("\n",content)
+    //}
+    contents := []byte(content)
+    if _,err := fileObj.Write(contents);err == nil {
+        fmt.Println("\n",content)
+    }
 }
 
 func (peersDB BitPeersDB) dump() {

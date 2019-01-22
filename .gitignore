@@ -1,3 +1,6 @@
 peers*.dat
 
 .DS_Store
+
+*.exe
+*.txt
